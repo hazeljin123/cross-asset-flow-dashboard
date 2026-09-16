@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>跨资产资金流日频看板 · 股债汇期加密</title>
+<script src="echarts.min.js"></script>
+<script>window.echarts||document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"><\/script>')</script>
+<style>
+  :root{ --red:#d8392b; --green:#1a9c5b; --ink:#222; --sub:#6b7280; --line:#e6e8ec; --bg:#f6f7f9; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+        font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:24px 20px 48px; }
+  header h1{ font-size:22px; margin:0 0 4px; }
+  .meta{ color:var(--sub); font-size:13px; margin-bottom:14px; }
+  .legend{ display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 18px; font-size:12.5px; }
+  .legend .pill{ padding:3px 10px; border-radius:20px; background:#fff; border:1px solid var(--line); }
+  .legend .real{ color:var(--red); border-color:#f3c9c4; }
+  .legend .proxy{ color:#b06a00; border-color:#f0dcb0; }
+
+  .panel{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
+  .panel h2{ font-size:16px; margin:0 0 4px; }
+  .panel .cap{ font-size:12.5px; color:var(--sub); margin-bottom:10px; line-height:1.7; }
+  .layer-h{ font-size:15px; font-weight:700; margin:0 0 12px; }
+  .layer-h .num{ display:inline-block; width:22px; height:22px; line-height:22px; text-align:center; border-radius:50%; background:var(--ink); color:#fff; font-size:12px; margin-right:8px; }
+  .chart{ width:100%; height:340px; }
+
+  .intra-grid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+  .intra-card{ background:#fff; border:1px solid var(--line); border-left:4px solid #ccc; border-radius:10px; padding:12px 14px; }
+  .intra-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px; }
+  .intra-label{ font-weight:700; font-size:14px; }
+  .intra-dir{ font-size:11.5px; font-weight:600; }
+  .intra-str{ font-size:11.5px; color:var(--sub); margin-bottom:6px; }
+  .intra-theme{ font-size:12.5px; line-height:1.65; color:#374151; }
+  .tag{ font-size:10.5px; padding:1px 8px; border-radius:9px; font-weight:600; }
+  .tag-real{ background:#fdecea; color:var(--red); }
+  .tag-proxy{ background:#fdf3e0; color:#b06a00; }
+
+  .stbl{ width:100%; border-collapse:collapse; font-size:13px; margin-top:4px; }
+  .stbl th, .stbl td{ border:1px solid var(--line); padding:9px 12px; text-align:center; }
+  .stbl th{ background:#fafbfc; color:var(--sub); font-weight:600; }
+  .stbl td:first-child{ text-align:left; }
+  .stbl tr:nth-child(even){ background:#fbfcfd; }
+
+  .thread{ border:1px solid var(--line); border-radius:10px; padding:10px 13px; margin-bottom:9px; background:#fff; }
+  .thread .t-title{ font-weight:700; font-size:13.5px; color:var(--ink); margin-bottom:3px; }
+  .thread .t-det{ font-size:13px; color:#374151; line-height:1.65; }
+
+  .detail h3{ font-size:15px; margin:0 0 10px; }
+  .detail .cap{ font-size:12px; color:var(--sub); margin:6px 0 4px; }
+  .plain{ background:#eef5ff; border:1px solid #cfe0fb; color:#14457a; border-radius:10px; padding:11px 14px; font-size:13px; line-height:1.75; margin:6px 0 12px; }
+  .plain b{ color:#0b3a73; }
+
+  .thesis{ background:linear-gradient(90deg,#fff7f6,#fff); border:1px solid #f3c9c4; border-left:5px solid var(--red); border-radius:12px; padding:14px 16px; margin-bottom:18px; font-size:14px; line-height:1.75; color:#7a261f; }
+  .thesis .badge{ display:inline-block; font-size:11px; font-weight:700; color:#fff; background:var(--red); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle; }
+  .thesis b{ color:#b91c1c; }
+
+  .narr{ font-size:13.5px; line-height:1.8; color:#374151; }
+  .narr b{ color:var(--ink); }
+  .risk{ background:#fff7ed; border:1px solid #fcd9b6; color:#9a3412; border-radius:10px; padding:10px 14px; font-size:13px; margin:6px 0 18px; }
+
+  .tabs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .tab{ padding:7px 16px; border-radius:20px; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:13px; font-weight:600; color:var(--sub); }
+  .tab:hover{ border-color:#c9ccd1; }
+  .tab.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .detail-page{ display:none; }
+  .detail-page.active{ display:block; }
+
+  footer{ font-size:12px; color:var(--sub); line-height:1.7; border-top:1px solid var(--line); padding-top:14px; }
+  .disc{ margin-top:10px; padding:10px 12px; background:#fbfbfc; border:1px dashed #d7dbe0; border-radius:8px; color:#525866; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>跨资产资金流日频看板 · 股 / 债 / 汇 / 期 / 加密</h1>
+    <div class="meta" id="meta"></div>
+    <div class="legend">
+      <span class="pill real">真实：股板块主力净流入、宽基指数涨跌</span>
+      <span class="pill proxy">代理：债券用期货+收益率+ETF；外汇用汇率涨跌；商品/加密用涨跌幅；美欧债用收益率</span>
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2 class="layer-h"><span class="num">1</span>各板块内部的资金主旨（资金在每个大类里在押什么）</h2>
+    <div class="cap">把每一类资产内部的资金流向归纳成一句话，并标出方向（红=流入、绿=流出）与数据性质。看清资金在单个市场里具体表达了什么——这是看板的核心。</div>
+    <div class="intra-grid" id="intraGrid"></div>
+  </section>
+
+  <section class="panel">
+    <h2 class="layer-h"><span class="num">2</span>资金强度排序（今日 vs 昨日，按强度降序；红=流入、绿=流出）</h2>
+    <div class="cap">⚠️ 重要：资金关注度高（强度大）≠ 一定在流入。债券、外汇、大宗商品、加密货币均可反向交易（资金既能流入也能流出），所以按「资金净方向」着色：红=流入，绿=流出。强度=该方向资金关注度(0-100)，为相对强弱推断、非净头寸；债/汇/期/加密为代理信号。昨日=前一交易日(9/15)估算，仅供对比资金关注度变化。股债汇期加密之间无统一「搬运」数据源，此为相对强弱视图。</div>
+    <div id="strengthTable"></div>
+  </section>
+
+  <section class="panel">
+    <h2 class="layer-h"><span class="num">3</span>板块之间的资金主旨（跨资产的宏观主线）</h2>
+    <div class="cap">只保留真正「跨板块之间」的资金逻辑链（地缘→能源→通胀→加息→强美元→各资产反应）；各板块<b>内部</b>的主旨已见第①层，此处不重复。</div>
+    <div class="thesis" id="interTheme"></div>
+    <div id="threads"></div>
+    <div class="risk" id="risk"></div>
+  </section>
+
+  <section class="panel">
+    <h2 class="layer-h"><span class="num">4</span>各板块资金流入流出明细（点击切换查看）</h2>
+    <div class="cap">与①②③并列的「下钻」界面：点击标签查看每个大类内部的资金流入/流出细项。股票为真实主力净流入；债/汇/期/加密为代理信号（涨跌幅/汇率方向推断）。</div>
+    <div class="tabs" id="detailTabs"></div>
+    <div id="details"></div>
+  </section>
+
+  <footer>
+    <div><b>数据来源</b></div>
+    <div id="sources"></div>
+    <div class="disc" id="disc"></div>
+  </footer>
+</div>
+
+<script>
+const DATA = {"date": "2026-09-16", "updated_at": "2026-09-16T19:00:00+08:00", "as_of": "A股/内盘期货为9月16日收盘；债券为9月16日收盘；海外商品/外汇/加密/美欧债为9月15日美欧盘收盘", "legend": {"real": "真实资金流/持仓数据（股板块主力净流入、宽基指数涨跌）", "proxy": "代理信号（债券用期货+收益率+ETF；外汇用汇率涨跌；商品/加密用涨跌幅；美欧债用收益率）"}, "categories": {"stock": {"label": "股票", "signal": "real", "direction": "long", "direction_cn": "流入（结构极集中，科创/小盘远强于大盘）", "strength": 85, "strength_cn": "强", "prev": {"strength": 55, "direction": "long"}, "summary": "放量普涨，资金单极化涌入AI算力硬件链（半导体/光通信/CPO/存储/PCB）；锂电、消费、银行地产被抽血。两市成交1.84万亿，放量2264亿，超4100只个股上涨。风格上科创50+4.14%、中证1000+2.01%远强于沪深300+0.68%，成长小盘占优。", "sub_title": "行业/概念板块主力净流入（真实，单位：亿元；农林牧渔等为9/16全行业口径，正=流入/红、负=流出/绿）", "sub_unit": "亿元", "subsectors": [{"name": "电子(申万)", "code": "01801080.PT", "change": 3.73, "value": 231.75, "note": "行业口径，居首"}, {"name": "CPO", "code": "02GN2211.PT", "change": 4.14, "value": 200.8, "note": "概念口径"}, {"name": "存储器", "code": "02GN2124.PT", "change": 4.0, "value": 150.3, "note": "概念口径"}, {"name": "光通信", "code": "02GN2190.PT", "change": 4.76, "value": 134.7, "note": "概念口径"}, {"name": "半导体", "code": "01801081.PT", "change": 4.44, "value": 135.9, "note": "领涨：有研硅+20%"}, {"name": "通信设备", "code": "01801102.PT", "change": 5.18, "value": 107.5, "note": "领涨：长芯博创+12.95%"}, {"name": "机械设备", "code": "01801060.PT", "change": 1.48, "value": 30.83, "note": "净流入"}, {"name": "元件", "code": "01801083.PT", "change": 2.63, "value": 28.9, "note": "领涨：威尔高+20%"}, {"name": "有色金属", "code": "01801120.PT", "change": 1.73, "value": 21.74, "note": "净流入"}, {"name": "基础化工", "code": "01801090.PT", "change": 1.17, "value": 11.49, "note": "净流入"}, {"name": "公用事业", "code": "01801140.PT", "change": 0.26, "value": 8.25, "note": "净流入"}, {"name": "建筑装饰", "code": "01801095.PT", "change": 0.92, "value": 6.5, "note": "净流入"}, {"name": "农林牧渔", "code": "01801010.PT", "change": -0.97, "value": 4.25, "note": "小幅净流入、板块收跌，非主线"}, {"name": "房地产", "code": "01801110.PT", "change": 1.03, "value": 2.64, "note": "小幅净流入"}, {"name": "茅指数", "code": "02GN2047.PT", "change": -0.46, "value": -19.6, "note": "净流出"}, {"name": "计算机", "code": "01801070.PT", "change": 0.82, "value": -4.03, "note": "行业净流出（概念分化）"}, {"name": "银行", "code": "01801050.PT", "change": -0.68, "value": -3.52, "note": "净流出"}, {"name": "国防军工", "code": "01801180.PT", "change": 0.9, "value": -8.99, "note": "净流出"}, {"name": "汽车", "code": "01801160.PT", "change": -0.29, "value": -14.0, "note": "净流出"}, {"name": "电力设备", "code": "01801730.PT", "change": -0.13, "value": -33.81, "note": "净流出居前"}, {"name": "电池", "code": "01801737.PT", "change": -1.08, "value": -35.8, "note": "净流出"}], "indexes": [{"name": "科创50", "change": 4.14, "note": "最强，科创成长"}, {"name": "中证1000", "change": 2.01, "note": "小盘强"}, {"name": "创业板指", "change": 1.96, "note": "成长强"}, {"name": "中证500", "change": 1.61, "note": ""}, {"name": "上证指数", "change": 0.71, "note": ""}, {"name": "沪深300", "change": 0.68, "note": "最小，大盘弱"}]}, "bond": {"label": "债券", "signal": "proxy", "direction": "long", "direction_cn": "国内债流入；美债/欧债流出（全球反向）", "strength": 55, "strength_cn": "中", "prev": {"strength": 52, "direction": "long"}, "summary": "用大白话：债券（尤其国债）就是「借钱给国家、拿固定利息的借条」，价格涨=愿意借钱的人变多、利息变低=押未来降息。今天国内国债期货全线小涨、收益率下行（10年降到1.681%），资金在买入。但今天最值得看的是——全球债市在和国内债市「对着干」：美债10年破5%、欧债德10年创2011年来高位，海外在疯狂抛债（收益率飙=价格跌），因为它们押「加息+通胀」；我们押「降息+宽松」。同一天，一边买债、一边卖债。", "plain": "一句话看懂：国内债券小涨，核心信号是「市场在押未来降息」——借钱给国家的人变多、利息变低（10年国债收益率降到1.681%）。但全球视角看，美债/欧债今天被大举抛售（美10年破5%、2007年来最高），和国内债完全反向：我们赌宽松、他们赌紧缩。注意：债券没有真实的「资金净流入」日频数据，这里用期货涨跌+收益率+ETF规模推断，属代理信号。", "sub_title": "债券分市场对比（代理，单位：%；国内为期货涨跌幅/收益率变动，美欧为收益率变动——收益率上行=价格跌=被抛售）", "sub_unit": "%", "segments": [{"market": "国内债券（人民币计价）", "mode": "price", "sub_title": "国债期货各期限涨跌幅 / 收益率变动（%）", "subsectors": [{"name": "30年国债期货 TL", "code": "TL", "change": 0.09, "value": 0.09, "note": "收116.220", "comment": "超长端涨得最多。30年国债的主要买主是保险、养老金这类「长钱」，也最反映对长期经济与通胀的看法。它领涨，说明长线资金在押「长期低利率甚至通缩」的环境，愿意用很低的收益把资金锁定几十年。"}, {"name": "10年国债期货 T", "code": "T0I00.CFE", "change": 0.03, "value": 0.03, "note": "收109.470", "comment": "10年期是全市场最关注的「基准」期限，代表对未来经济、通胀和货币政策的中期判断。它涨、收益率降到1.681%，说明市场认为经济动能不算强、未来利率中枢还会往下走，于是愿意用更低的收益提前锁定长期资金（避险+配置）。"}, {"name": "5年国债期货 TF", "code": "TF0I00.CFE", "change": 0.01, "value": 0.01, "note": "收106.495", "comment": "中期品种，更多反映政策预期和资金面松紧。只微涨，说明市场温和预期货币会略宽松，但还没到强烈押注「马上降息」的地步。"}, {"name": "2年国债期货 TS", "code": "TS", "change": 0.0, "value": 0.0, "note": "收102.596，持平", "comment": "最短期限，对央行短期操作和资金松紧最敏感。今天收平，代表市场对「近期会不会立刻降准降息」没有明确押注，短端资金面平稳、不紧不松。"}, {"name": "10Y国债收益率", "code": "260010", "change": -0.59, "value": -0.59, "note": "下行至1.681%（BP）", "comment": "收益率就是「借钱要付的利息」。它下行，和国债期货涨价是一回事：利息变低=债券更贵=资金在买入。1.681%已接近历史低位，反映资金对「未来低利率」的预期相当强。"}, {"name": "30Y国债收益率", "code": "2600004", "change": -0.32, "value": -0.32, "note": "2.168%（BP）", "comment": "超长端利率也下行，印证长钱在持续买入。长端降得比短端温和，形成「牛平」（短端更敏感），一般出现在降息预期升温、但长端还被政府发债供给压制的阶段。"}, {"name": "中证转债", "code": "000832", "change": 0.58, "value": 0.58, "note": "收480.67，236只收涨", "comment": "可转债是「能转成股票的债券」，带股性。它跟着今天股市涨，说明债券里偏风险的这部分也偏risk-on，但涨幅远小于股票，体现「以债为主、顺带沾点股」。"}]}, {"market": "美债（美元计价）", "mode": "yield", "sub_title": "美债收益率（%，上行=价格跌=资金在卖）", "subsectors": [{"name": "美2年国债", "code": "US2Y", "change": 0.5, "value": 0.5, "note": "约4.66%（BP）", "comment": "最短期限，对美联储利率最敏感。它基本持平微涨，说明本周加息25BP已是明牌（概率约92%），短端没有再恐慌性抛售——因为'加'已经写在墙上了。"}, {"name": "美5年国债", "code": "US5Y", "change": 0.2, "value": 0.2, "note": "约4.82%（BP）", "comment": "中段微涨，反映'年内还要再加息'的预期正在定价中。"}, {"name": "美10年国债", "code": "US10Y", "change": 0.8, "value": 0.8, "note": "5.004%（BP），破5%、2007年来最高", "comment": "全球资产定价的'锚'。它突破5%、创2007年以来新高，是今天全球最重磅的信号——市场在说：油价推升的通胀还没被压制，长钱要求更高的利息才肯借给美国。收益率上行=债券价格下跌=资金在抛售美债。"}, {"name": "美30年国债", "code": "US30Y", "change": 1.7, "value": 1.7, "note": "5.365%（BP），2007年来最高", "comment": "超长端涨得最多（收益率升最多=被抛得最狠），说明全球'长钱'（养老金、保险、外资）在撤离长久期美债，担心财政赤字+通胀长期化。2s10s利差扩大=曲线变陡，是典型的通胀/滞胀定价。"}]}, {"market": "欧债（欧元计价）", "mode": "yield", "sub_title": "德/法/英/意国债收益率（%，上行=被抛售）", "subsectors": [{"name": "德10年国债", "code": "DE10Y", "change": 2.0, "value": 2.0, "note": "3.538%，2011年来最高", "comment": "欧元区基准。升到2011年以来最高——能源通胀+欧洲央行上周刚加息至2.50%+市场预期年底再加息，欧洲债同样在被抛。"}, {"name": "德2年国债", "code": "DE2Y", "change": -0.6, "value": -0.6, "note": "3.257%，近三年高位", "comment": "短端微跌（收益率降）=价格小涨，因为市场觉得欧央行短端已加得差不多。但长端仍在涨，说明'长期通胀/财政'担忧压不住。"}, {"name": "德30年国债", "code": "DE30Y", "change": 3.4, "value": 3.4, "note": "3.892%，15年高位", "comment": "长端被抛最明显，和美德同向——全球长钱在重新要求'通胀补偿'。"}, {"name": "英10年国债", "code": "GB10Y", "change": 2.0, "value": 2.0, "note": "5.386%，数十年高位", "comment": "英国债收益率已到数十年高位，英央行甚至考虑'停止卖出长债'来救市——足见抛压之重。"}, {"name": "法10年国债", "code": "FR10Y", "change": 3.1, "value": 3.1, "note": "4.505%", "comment": "财政赤字担忧，法德利差走阔。"}, {"name": "意10年国债", "code": "IT10Y", "change": 3.3, "value": 3.3, "note": "4.417%", "comment": "欧元区边缘国，收益率更高=风险溢价更贵。"}]}]}, "fx": {"label": "外汇", "signal": "proxy", "direction": "short", "direction_cn": "流出非美货币（流入美元）", "strength": 65, "strength_cn": "中强", "prev": {"strength": 70, "direction": "short"}, "summary": "净流向是「买入美元、卖出一切非美」：美元指数9/15收99.63创月内新高（+0.16%），受10Y美债破5%、美联储9月加息概率90%双轮驱动；非美货币普弱：欧元-0.07%、英镑-0.18%、澳元-0.12%（商品货币）、日元USDJPY+0.50%、瑞郎+0.17%；人民币贬值（USDCNY+0.09%），短端承压。从资金表达看，这是资金流出非美、流入美元——所以归入「流出资金」一侧。汇率涨跌=资金方向代理。", "sub_title": "主要货币对当日涨跌（代理，升值=资金流入，单位：%）", "sub_unit": "%", "subsectors": [{"name": "美元指数 DXY", "code": "DINIW.FX", "change": 0.16, "value": 0.16, "note": "9/15收99.63，创月内新高，偏多"}, {"name": "美元/人民币", "code": "USDCNY.FX", "change": 0.09, "value": 0.09, "note": "人民币贬值=资金流出CNY"}, {"name": "美元/日元", "code": "USDJPY.FX", "change": 0.5, "value": 0.5, "note": "日元贬值=资金流出JPY"}, {"name": "美元/瑞郎", "code": "USDCHF.FX", "change": 0.17, "value": 0.17, "note": "瑞郎偏弱"}, {"name": "美元/加元", "code": "USDCAD.FX", "change": 0.15, "value": 0.15, "note": "加元偏弱"}, {"name": "欧元/美元", "code": "EURUSD.FX", "change": -0.07, "value": -0.07, "note": "非美偏弱"}, {"name": "英镑/美元", "code": "GBPUSD.FX", "change": -0.18, "value": -0.18, "note": "非美偏弱"}, {"name": "澳元/美元", "code": "AUDUSD.FX", "change": -0.12, "value": -0.12, "note": "商品货币偏弱"}]}, "commodity": {"label": "大宗商品", "signal": "proxy", "direction": "long", "direction_cn": "能源/化工/农产品蛋白粕/贵金属流入 / 工业分化 / 黑色偏弱 / 新能源金属流出", "strength": 72, "strength_cn": "中强", "prev": {"strength": 68, "direction": "long"}, "summary": "原油强多头（中东双海峡供应冲击，布油108+，天然气TTF近80欧高位）；化工成本驱动强（瓶片+4.09%、甲醇+3.59%、乙二醇+3.17%、沥青+2.83%）；农产品蛋白粕强多头（菜粕+4.16%、豆粕+3.11%）；贵金属多头（沪金+1.00%、沪银+2.37%，人民币计价对冲强美元）；工业金属分化（铝铅小涨、镍-2.41%领跌）；黑色偏弱（焦煤-0.06%、焦炭-0.51%）；新能源金属弱（碳酸锂-2.95%、工业硅-0.59%）。整体净偏多，但内部分化极大。", "sub_title": "商品板块涨跌幅（代理，单位：%）", "sub_unit": "%", "groups": [{"group": "能源", "items": [{"name": "WTI原油", "code": "CL", "change": 4.03, "value": 4.03, "note": "105.48美元，创5月来新高"}, {"name": "布伦特原油", "code": "BZ", "change": 2.65, "value": 2.65, "note": "108.48美元"}, {"name": "天然气(亨利港)", "code": "NG", "change": 0.42, "value": 0.42, "note": "2.908美元，LNG出口需求强"}, {"name": "沪原油 SC", "code": "SC0I00.INE", "change": -6.89, "value": -6.89, "note": "内盘口径偏离，唯一增仓"}]}, {"group": "化工", "items": [{"name": "瓶片", "code": "PR0I00.CZC", "change": 4.09, "value": 4.09, "note": "领涨能化"}, {"name": "甲醇", "code": "MA0I00.CZC", "change": 3.59, "value": 3.59, "note": "港口去库+双节备货"}, {"name": "乙二醇", "code": "EG0I00.CZC", "change": 3.17, "value": 3.17, "note": "去库中"}, {"name": "沥青", "code": "BU0I00.SHF", "change": 2.83, "value": 2.83, "note": "成本推动"}, {"name": "PTA", "code": "TA0I00.CZC", "change": 1.86, "value": 1.86, "note": "聚酯链"}, {"name": "LPG", "code": "PG0I00.DCE", "change": 1.18, "value": 1.18, "note": ""}, {"name": "燃油", "code": "FU0I00.SHF", "change": 0.13, "value": 0.13, "note": ""}, {"name": "纯碱", "code": "SA0I00.CZC", "change": -0.69, "value": -0.69, "note": ""}, {"name": "PVC", "code": "V0I00.DCE", "change": -1.03, "value": -1.03, "note": "地产链偏弱"}, {"name": "玻璃", "code": "FG0I00.CZC", "change": -1.3, "value": -1.3, "note": "地产链偏弱"}]}, {"group": "贵金属", "items": [{"name": "沪银", "code": "AG0I00.SHF", "change": 2.37, "value": 2.37, "note": "15415元/千克"}, {"name": "铂", "code": "PT", "change": 1.72, "value": 1.72, "note": "避险+工业"}, {"name": "钯", "code": "PD", "change": 1.5, "value": 1.5, "note": "避险+工业"}, {"name": "沪金", "code": "AU0I00.SHF", "change": 1.0, "value": 1.0, "note": "932元/克，人民币计价对冲"}, {"name": "COMEX黄金", "code": "GC", "change": 0.01, "value": 0.01, "note": "4333美元，美元计价近平"}]}, {"group": "工业金属", "items": [{"name": "LME锌", "code": "ZN", "change": 1.0, "value": 1.0, "note": ""}, {"name": "沪铝", "code": "AL0I00.SHF", "change": 0.58, "value": 0.58, "note": ""}, {"name": "沪铅", "code": "PB0I00.SHF", "change": 0.35, "value": 0.35, "note": ""}, {"name": "LME铜", "code": "CU", "change": 0.81, "value": 0.81, "note": ""}, {"name": "LME锡", "code": "SN", "change": 0.4, "value": 0.4, "note": ""}, {"name": "LME镍", "code": "NI", "change": -2.41, "value": -2.41, "note": "领跌"}]}, {"group": "黑色系", "items": [{"name": "热卷", "code": "HC0I00.SHF", "change": 0.36, "value": 0.36, "note": ""}, {"name": "螺纹钢", "code": "RB0I00.SHF", "change": 0.74, "value": 0.74, "note": ""}, {"name": "铁矿石", "code": "I0I00.DCE", "change": 0.14, "value": 0.14, "note": ""}, {"name": "焦煤", "code": "JM0I00.DCE", "change": -0.06, "value": -0.06, "note": ""}, {"name": "焦炭", "code": "J0I00.DCE", "change": -0.51, "value": -0.51, "note": "领跌"}]}, {"group": "新能源金属", "items": [{"name": "碳酸锂", "code": "LC0I00.GFEX", "change": -2.95, "value": -2.95, "note": "供强需弱"}, {"name": "工业硅", "code": "SI0I00.GFEX", "change": -0.59, "value": -0.59, "note": "过剩"}, {"name": "多晶硅", "code": "PS0I00.GFEX", "change": 0.01, "value": 0.01, "note": "近平"}]}, {"group": "农产品", "items": [{"name": "菜粕", "code": "RM0I00.CZC", "change": 4.16, "value": 4.16, "note": "领涨，水产刚需+豆粕带动"}, {"name": "豆粕", "code": "M0I00.DCE", "change": 3.11, "value": 3.11, "note": "美豆天气溢价+双节备货"}, {"name": "豆二", "code": "B0I00.DCE", "change": 2.43, "value": 2.43, "note": ""}, {"name": "花生", "code": "PK0I00.CZC", "change": 0.67, "value": 0.67, "note": ""}, {"name": "菜油", "code": "OI0I00.CZC", "change": 0.91, "value": 0.91, "note": ""}, {"name": "豆油", "code": "Y0I00.DCE", "change": 0.85, "value": 0.85, "note": ""}, {"name": "棕榈油", "code": "P0I00.DCE", "change": 0.64, "value": 0.64, "note": ""}, {"name": "玉米", "code": "C0I00.DCE", "change": 0.18, "value": 0.18, "note": ""}, {"name": "棉花", "code": "CF0I00.CZC", "change": -0.43, "value": -0.43, "note": "软商品偏弱"}, {"name": "苹果", "code": "AP0I00.CZC", "change": -1.47, "value": -1.47, "note": "新季丰产预期"}, {"name": "生猪", "code": "LH0I00.DCE", "change": -1.72, "value": -1.72, "note": "供强需弱"}, {"name": "白糖", "code": "SR0I00.CZC", "change": 0.0, "value": 0.0, "note": "平收"}, {"name": "鸡蛋", "code": "JD0I00.DCE", "change": 0.0, "value": 0.0, "note": "平收"}]}]}, "crypto": {"label": "加密货币", "signal": "proxy", "direction": "short", "direction_cn": "流出（利率+监管双杀）", "strength": 30, "strength_cn": "弱", "prev": {"strength": 32, "direction": "short"}, "summary": "10Y美债破5%（2007年来最高）推升流动性成本，叠加美国《CLARITY法案》参议院未通过（50:49）致监管真空，加密全线重挫；BTC约-3%、ETH约-5%、SOL约-6%，加密概念股（Circle-11%、Coinbase-10%）领跌。现货ETF资金方向分歧（有源报单日净流出4.5亿美元）。", "sub_title": "主要加密货币涨跌幅（代理，单位：%）", "sub_unit": "%", "subsectors": [{"name": "比特币 BTC", "code": "BTC", "change": -3.19, "value": -3.19, "note": "约7.54万刀"}, {"name": "以太坊 ETH", "code": "ETH", "change": -5.0, "value": -5.0, "note": "约2389刀"}, {"name": "Solana SOL", "code": "SOL", "change": -5.76, "value": -5.76, "note": "约96刀"}, {"name": "XRP", "code": "XRP", "change": -10.0, "value": -10.0, "note": "法案失败后暴跌"}]}}, "cross_asset": {"rotation_cn": "资金强度排序（今日 vs 昨日9/15，按今日强度降序）：股票85(流入) > 大宗商品72(流入) > 外汇65(流出) > 债券55(流入·国内) > 加密货币30(流出)。较昨日：股票+30(从9/15普跌转放量普涨)、大宗+4、债券+3、外汇-5(9/15美元单日飙升0.39%更强)、加密-2。", "intra_themes": [{"label": "股票", "theme": "板块内：资金单极化押注AI算力硬件链（半导体/CPO/存储），科创50+4.14%远强于沪深300+0.68%；新能源、消费、银行地产被抽血——只买确定性成长，不买大盘价值。A股今日独立于海外下跌，科创逆势领涨，呈「外弱内强」。"}, {"label": "债券", "theme": "板块内：国内债温和「借钱给国家」押降息（国债涨、收益率下行）；但美债/欧债被疯狂抛售（美10年破5%、德10年创2011年来高），全球押「加息+通胀」。同一天一边买债一边卖债——中美国债完全反向（宽松vs紧缩）。"}, {"label": "外汇", "theme": "板块内：净流向「买入美元、卖出一切非美」（欧元/英镑/日元/瑞郎/商品货币/人民币同步贬值）——单边流出非美、流入美元，无分歧。"}, {"label": "大宗商品", "theme": "板块内：能源/化工/农产品蛋白粕/贵金属为流入，新能源金属与黑色/地产链为流出；资金只押「地缘通胀+成本+刚需」强逻辑。注意贵金属内外分化——沪金+1.00%强（人民币计价对冲），COMEX金近平弱；商品内部分化（蛋白粕/成本强，新能源/黑色弱）。"}, {"label": "加密货币", "theme": "板块内：利率破5%+监管法案流产双杀，BTC/ETH/SOL/XRP全线下跌、概念股暴跌；资金撤离风险资产——唯一明确流出的大类。"}], "thesis": "资金今日在表达一条由中东地缘驱动的「通胀+加息」跨资产主线：油价→通胀→美债遭抛(收益率破5%)→强美元。强美元压制非美货币与加密（流出），但人民币计价资产（国内债、沪金）因本土逻辑逆势走强；风险偏好更出现「东升西落」——A股科创吸金、加密被抛。债市是最尖锐的分化点：国内押宽松、海外押紧缩，中美国债同日反向。", "threads": [{"title": "地缘冲击 → 能源涨价 → 全球通胀预期", "detail": "中东双海峡供应冲击（沙特东西管道停运、延布港暂停装船、利比亚停产）推升油价，布油108+、WTI破105，欧洲天然气TTF近80欧高位；输入型通胀预期升温，化工（瓶片/甲醇/乙二醇/沥青）同步受成本驱动走强。这是本轮跨资产波动的总源头。"}, {"title": "通胀 → 美联储加息 → 美债收益率破5% → 强美元", "detail": "油价推升通胀，市场把美联储9月加息概率定价到约90-95%，10Y美债收益率破5%（2007年来最高）、30年5.36%；美元指数9/15收99.48、9/16续升至99.63创月内新高。这是连接「债→汇」的跨资产链条：债券被抛(收益率上行)=资金卖出长债，美元被买=资金流入美元。"}, {"title": "强美元+高利率 → 非美货币与加密被抛（流出），但人民币计价资产对冲走强", "detail": "强美元直接压制所有非美货币（欧元/英镑/日元/瑞郎/商品货币/人民币同步贬值=资金流出非美、流入美元），并叠加高利率压制加密。但人民币计价资产出现「对冲」：国内国债因押降息而多头、沪金因汇率对冲而强（沪金+1.00% vs COMEX金近平）。同一轮强美元下，美元计价资产承压、人民币计价资产逆势——跨市场分化。"}, {"title": "全球风险偏好「东升西落」：A股科创吸金 vs 加密被抛", "detail": "在美元流动性收紧的同一天，风险资产内部也出现跨市场分化——A股因本土产业催化（半导体涨价、AI算力订单、金融十五五规划将集成电路列为战略之首）压过外部收紧，科创50+4.14%领涨、主力净流入约360亿；而加密因利率+监管双杀成最先被抛的风险资产。资金在「东方的权益成长」与「西方的加密风险」之间作出相反选择。"}], "narrative": "", "key_risk": "美联储9月议息决议（加息靴子能否落地）是短期最大变量；中东局势（霍尔木兹/曼德海峡）主导原油与通胀预期；中美国债反向若因议息结果逆转，将引发跨资产重定价；A股科创/算力链交易拥挤、宽基极端分化，需防议息结果触发获利回吐；双节备货结束后化工/农产品情绪可能回落；加密受监管与利率双压，波动放大。"}, "sources": ["Neodata 板块资金排行（行业/概念主力净流入，2026-09-16 15:13）", "Neodata 期货实时行情 / 外汇汇率（2026-09-16）", "westock-data 指数与ETF行情（宽基指数/中证转债，2026-09-16）", "证券时报/新浪财经/东方财富/上海证券报 A股收评（2026-09-16）", "金融界/新浪财经/财联社 国内期货收盘（能源/化工/贵金属/农产品/新能源金属，2026-09-16）", "光大期货金融类日报、瑞达期货晨会、债市早参（2026-09-16）", "新华财经/新浪财经 美债收益率破5%、2007年来新高（2026-09-15 美盘）", "东方财富/华尔街见闻/金十数据 欧债收益率（德10年创2011年来高、英10年数十年高，2026-09-15）", "中国货币市场/Wind 美元指数与主要货币对（2026-09-15 美盘收盘）", "MEXC Crypto Pulse / 华尔街见闻 / 券商中国 加密市场（2026-09-16）", "金十数据全球财经早餐、国际金融要情（2026-09-16）"]};
+
+const order = ['stock','bond','fx','commodity','crypto'];
+const DIR_COLOR = { long:'#d8392b', short:'#1a9c5b', neutral:'#8a8a8a' };
+const KEY_BY_LABEL = { '股票':'stock', '债券':'bond', '外汇':'fx', '大宗商品':'commodity', '加密货币':'crypto' };
+function dirText(d){ return d === 'long' ? '流入' : (d === 'short' ? '流出' : '中性'); }
+
+document.getElementById('meta').textContent =
+  '数据日期：' + DATA.date + '　|　更新：' + DATA.updated_at + '　|　口径：' + DATA.as_of;
+
+// 第1层：各板块内部资金主旨（含方向/标签/强度，5张卡始终并列单行）
+document.getElementById('intraGrid').innerHTML = DATA.cross_asset.intra_themes.map(function(t){
+  const k = KEY_BY_LABEL[t.label];
+  const c = DATA.categories[k];
+  const col = DIR_COLOR[c.direction];
+  const tag = c.signal === 'real'
+    ? '<span class="tag tag-real">真实</span>'
+    : '<span class="tag tag-proxy">代理</span>';
+  return '<div class="intra-card" style="border-left-color:'+col+'">'
+    + '<div class="intra-head"><span class="intra-label" style="color:'+col+'">'+t.label+'</span>'+tag
+    + '<span class="intra-dir" style="color:'+col+';background:'+col+'1a;padding:1px 9px;border-radius:9px">'+dirText(c.direction)+'</span></div>'
+    + '<div class="intra-str">资金强度 '+c.strength+'/100（'+c.strength_cn+'）　·　'+c.direction_cn+'</div>'
+    + '<div class="intra-theme">'+t.theme+'</div></div>';
+}).join('');
+
+// 资金强度排序：单表，今日 vs 昨日，按今日强度降序，红=流入绿=流出
+(function(){
+  const cats = order.map(function(k){ return DATA.categories[k]; });
+  cats.sort(function(a,b){ return b.strength - a.strength; });
+  const rows = cats.map(function(c){
+    const col = DIR_COLOR[c.direction];
+    const prev = c.prev || { strength:null };
+    let deltaHtml = '<span style="color:var(--sub)">—</span>';
+    if(prev.strength != null){
+      const d = c.strength - prev.strength;
+      if(d !== 0){
+        const up = d > 0;
+        const dcol = up ? '#d8392b' : '#1a9c5b';
+        deltaHtml = '<span style="color:'+dcol+';font-weight:700">'+(up?'▲ ':'▼ ')+Math.abs(d)+'</span>';
+      } else { deltaHtml = '<span style="color:var(--sub)">0</span>'; }
+    }
+    return '<tr>'
+      + '<td style="font-weight:700">'+c.label+'</td>'
+      + '<td><span style="display:inline-block;padding:2px 12px;border-radius:11px;color:#fff;background:'+col+';font-size:12px;font-weight:600">'+dirText(c.direction)+'</span></td>'
+      + '<td style="color:'+col+';font-weight:700;font-size:15px">'+c.strength+'</td>'
+      + '<td style="color:var(--sub)">'+(prev.strength==null?'—':prev.strength)+'</td>'
+      + '<td>'+deltaHtml+'</td>'
+      + '</tr>';
+  }).join('');
+  document.getElementById('strengthTable').innerHTML =
+    '<table class="stbl"><thead><tr><th>大类</th><th>方向</th><th>今日强度</th><th>昨日强度(9/15)</th><th>变化</th></tr></thead><tbody>'+rows+'</tbody></table>';
+})();
+
+// 第3层：板块间主旨（thesis 为一句话主线，threads 为真正跨资产的4条逻辑链）
+document.getElementById('interTheme').innerHTML =
+  '<span class="badge">主线</span><b>板块间主旨：</b>' + DATA.cross_asset.thesis;
+document.getElementById('threads').innerHTML = DATA.cross_asset.threads.map(function(t){
+  return '<div class="thread"><div class="t-title">'+t.title+'</div><div class="t-det">'+t.detail+'</div></div>';
+}).join('');
+
+function drawBar(id, items, mode){
+  mode = mode || 'price';
+  const chart = echarts.init(document.getElementById(id));
+  chart.setOption({
+    tooltip:{ trigger:'axis', axisPointer:{type:'shadow'},
+      formatter:function(p){ const it=items[p[0].dataIndex]; return '<b>'+it.name+'</b><br/>数值：'+it.value+'<br/>'+(it.note||''); } },
+    grid:{ left:150, right:60, top:20, bottom:30 },
+    xAxis:{ type:'value' },
+    yAxis:{ type:'category', data:items.map(function(it){ return it.name; }), inverse:true },
+    series:[{ type:'bar',
+      data:items.map(function(it){
+        // price 模式：涨=红(流入)；yield 模式：收益率上行=绿(被抛/流出)
+        const up = it.value >= 0;
+        const color = mode === 'yield' ? (up ? '#1a9c5b' : '#d8392b') : (up ? '#d8392b' : '#1a9c5b');
+        return { value:it.value, itemStyle:{ color:color } };
+      }),
+      label:{ show:true, position:'right', formatter:'{c}' } }]
+  });
+}
+
+// 明细：标签分页，懒加载图表（默认显示首个标签）
+const detailsEl = document.getElementById('details');
+const tabsEl = document.getElementById('detailTabs');
+const built = {};
+order.forEach(function(k, idx){
+  const c = DATA.categories[k];
+  const btn = document.createElement('button');
+  btn.className = 'tab' + (idx===0 ? ' active' : '');
+  btn.textContent = c.label;
+  btn.dataset.k = k;
+  btn.onclick = function(){ switchDetail(k); };
+  tabsEl.appendChild(btn);
+
+  const page = document.createElement('div');
+  page.className = 'detail-page' + (idx===0 ? ' active' : '');
+  page.id = 'dp_'+k;
+  page.innerHTML = '<div class="detail"><h3>'+c.label+' · '+(c.sub_title||'')+'</h3>'
+    + (c.plain ? '<div class="plain">'+c.plain+'</div>' : '') + '</div>';
+  detailsEl.appendChild(page);
+  built[k] = false;
+});
+
+function buildCharts(k){
+  const c = DATA.categories[k];
+  const box = document.getElementById('dp_'+k).querySelector('.detail');
+  if(c.indexes){
+    const ig = 'idx_'+k;
+    const sub = document.createElement('div');
+    sub.innerHTML = '<div class="cap">宽基指数涨跌（%，红涨绿跌）</div><div class="chart" id="'+ig+'"></div>';
+    box.appendChild(sub);
+    drawBar(ig, c.indexes.map(function(s){ return { name:s.name, value:s.change, note:s.note||'' }; }));
+  }
+  if(c.segments){
+    c.segments.forEach(function(seg, i){
+      const gid = 'seg_'+k+'_'+i;
+      const sub = document.createElement('div');
+      sub.innerHTML = '<div class="cap" style="margin-top:8px;">'+seg.market+'　'+seg.sub_title+'</div><div class="chart" id="'+gid+'"></div>';
+      box.appendChild(sub);
+      drawBar(gid, seg.subsectors.map(function(s){ return { name:s.name, value:s.value, note:s.note||'' }; }), seg.mode || 'price');
+      if(seg.subsectors.some(function(s){ return s.comment; })){
+        const cid = 'cmt_'+k+'_'+i;
+        const cdiv = document.createElement('div');
+        cdiv.innerHTML = '<div class="cap" style="margin-top:8px;">期限解读（各变化代表的市场态度）</div><div id="'+cid+'"></div>';
+        box.appendChild(cdiv);
+        document.getElementById(cid).innerHTML = seg.subsectors.map(function(s){
+          const sign = s.change >= 0 ? '+' : '';
+          return '<div class="thread"><div class="t-title">'+s.name+'　'+sign+s.change+'%</div><div class="t-det">'+s.comment+'</div></div>';
+        }).join('');
+      }
+    });
+  } else if(c.groups){
+    c.groups.forEach(function(g){
+      const gid = 'grp_'+k+'_'+g.group;
+      const sub = document.createElement('div');
+      sub.innerHTML = '<div class="cap" style="margin-top:8px;">'+g.group+'（%，红涨绿跌）</div><div class="chart" id="'+gid+'"></div>';
+      box.appendChild(sub);
+      drawBar(gid, g.items.map(function(it){ return { name:it.name, value:it.value, note:it.note||'' }; }));
+    });
+  } else if(c.subsectors){
+    const gid = 'chart_'+k;
+    const sub = document.createElement('div');
+    sub.innerHTML = '<div class="chart" id="'+gid+'"></div>';
+    box.appendChild(sub);
+    drawBar(gid, c.subsectors.map(function(s){ return { name:s.name, value:s.value, note:s.note||'' }; }));
+  }
+  built[k] = true;
+}
+
+function switchDetail(k){
+  order.forEach(function(o){ document.getElementById('dp_'+o).classList.toggle('active', o===k); });
+  Array.prototype.forEach.call(tabsEl.children, function(b){ b.classList.toggle('active', b.dataset.k===k); });
+  if(!built[k]){ buildCharts(k); }
+  else {
+    document.querySelectorAll('#dp_'+k+' .chart').forEach(function(el){ const inst = echarts.getInstanceByDom(el); if(inst) inst.resize(); });
+  }
+}
+
+buildCharts(order[0]);
+
+document.getElementById('risk').innerHTML = '<b>关键风险：</b>' + DATA.cross_asset.key_risk;
+document.getElementById('sources').innerHTML = DATA.sources.map(function(s){ return '· ' + s; }).join('<br/>');
+document.getElementById('disc').innerHTML = '免责声明：以上内容基于公开数据和量化分析，仅供参考，不构成投资建议。市场有风险，投资需谨慎。'
+  + '任何投资决策应结合个人风险承受能力、资金状况和投资目标独立判断，必要时咨询持牌专业机构。过往表现不预示未来收益。';
+
+window.addEventListener('resize', function(){
+  document.querySelectorAll('.chart').forEach(function(el){ const inst = echarts.getInstanceByDom(el); if(inst){ inst.resize(); } });
+});
+
+</script>
+</body>
+</html>
