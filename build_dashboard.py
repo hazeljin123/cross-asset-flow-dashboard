@@ -181,7 +181,7 @@ document.getElementById('intraGrid').innerHTML = DATA.cross_asset.intra_themes.m
       + '</tr>';
   }).join('');
   document.getElementById('strengthTable').innerHTML =
-    '<table class="stbl"><thead><tr><th>大类</th><th>方向</th><th>今日强度</th><th>昨日强度(9/15)</th><th>变化</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    '<table class="stbl"><thead><tr><th>大类</th><th>方向</th><th>今日强度</th><th>昨日强度</th><th>变化</th></tr></thead><tbody>'+rows+'</tbody></table>';
 })();
 
 // 第3层：板块间主旨（thesis 为一句话主线，threads 为真正跨资产的4条逻辑链）
